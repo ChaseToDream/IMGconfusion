@@ -47,8 +47,10 @@ export class SeededPRNG {
 
 /**
  * 将密码字符串转换为数值种子（使用 FNV-1a 哈希算法）
+ * 空密钥时返回固定默认种子，使密钥成为可选参数
  */
 export function keyToSeed(key: string): number {
+  if (!key) return 0x4d47434f
   let hash = 0x811c9dc5
   for (let i = 0; i < key.length; i++) {
     hash ^= key.charCodeAt(i)

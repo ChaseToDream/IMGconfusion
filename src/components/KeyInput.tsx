@@ -12,14 +12,17 @@ export function KeyInput({ value, onChange, disabled = false, label = '加密密
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-400">{label}</label>
+      <label className="block text-sm font-medium text-gray-400">
+        {label}
+        <span className="text-gray-600 ml-1">（可选）</span>
+      </label>
       <div className="relative">
         <input
           type={showKey ? 'text' : 'password'}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
-          placeholder="请输入密钥（还原时需使用相同密钥）"
+          placeholder="留空则使用默认密钥，设置后还原时需相同密钥"
           className="input-field pr-12"
         />
         <button

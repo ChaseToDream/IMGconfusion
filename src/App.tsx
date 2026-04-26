@@ -65,7 +65,7 @@ export default function App() {
   }, [])
 
   const processImage = useCallback(async () => {
-    if (!file || !key) return
+    if (!file) return
 
     setProcessing(true)
     setError(null)
@@ -182,18 +182,18 @@ export default function App() {
       setError('请先选择图片')
       return
     }
-    if (!key) {
-      setError('请输入密钥')
-      return
-    }
 
     const actionText = mode === 'obfuscate' ? '混淆' : '还原'
     setConfirm({
       open: true,
       title: `确认${actionText}`,
       message: mode === 'obfuscate'
-        ? '混淆后的图片将无法被人眼识别，请务必牢记密钥，丢失密钥将无法还原！'
-        : '请确保使用与混淆时相同的密钥，密钥错误将产生错误的还原结果。',
+        ? key
+          ? '混淆后的图片将无法被人眼识别，请务必牢记密钥，丢失密钥将无法还原！'
+          : '未设置密钥，任何人使用本工具均可还原图片。建议设置密钥以提高安全性。'
+        : key
+          ? '请确保使用与混淆时相同的密钥，密钥错误将产生错误的还原结果。'
+          : '该图片未使用密钥混淆，直接还原即可。',
       onConfirm: () => {
         setConfirm((prev) => ({ ...prev, open: false }))
         processImage()
@@ -299,7 +299,7 @@ export default function App() {
           <div className="flex gap-3">
             <button
               onClick={handleProcessClick}
-              disabled={processing || !file || !key}
+              disabled={processing || !file}
               className="btn-primary flex-1 flex items-center justify-center gap-2"
             >
               {processing ? (
@@ -338,7 +338,7 @@ export default function App() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-500">
             <div className="flex items-start gap-2">
               <span className="text-primary-500 mt-0.5">1</span>
-              <span>选择「混淆」模式，上传图片并输入密钥</span>
+              <span>选择「混淆」模式，上传图片（可设置密钥）</span>
             </div>
             <div className="flex items-start gap-2">
               <span className="text-primary-500 mt-0.5">2</span>
@@ -350,11 +350,11 @@ export default function App() {
             </div>
             <div className="flex items-start gap-2">
               <span className="text-primary-500 mt-0.5">4</span>
-              <span>输入相同密钥，点击还原图片</span>
+              <span>输入相同密钥（若混淆时设置了），点击还原</span>
             </div>
           </div>
           <p className="text-xs text-gray-600 mt-3">
-            ⚠️ 所有处理均在本地浏览器完成，图片不会上传至任何服务器。请妥善保管密钥，丢失密钥将无法还原图片。
+            ⚠️ 所有处理均在本地浏览器完成，图片不会上传至任何服务器。设置密钥可提高安全性，丢失密钥将无法还原图片。
           </p>
         </div>
       </main>
