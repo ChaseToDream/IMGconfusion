@@ -9,13 +9,16 @@ export function ImagePreview({ originalUrl, processedUrl, originalName, processe
   if (!originalUrl && !processedUrl) return null
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up">
       {originalUrl && (
-        <div className="space-y-2">
-          <p className="text-sm text-gray-400 font-medium">
+        <div className="space-y-2.5">
+          <p className="text-sm font-medium text-surface-900/50 dark:text-surface-100/50">
             原始图片{originalName ? ` · ${originalName}` : ''}
           </p>
-          <div className="relative bg-gray-800 rounded-xl overflow-hidden border border-gray-700">
+          <div className="relative rounded-2xl overflow-hidden
+                         bg-surface-100 dark:bg-surface-700/40
+                         border border-surface-200/60 dark:border-surface-700/40
+                         ring-1 ring-inset ring-black/[0.03] dark:ring-white/[0.03]">
             <img
               src={originalUrl}
               alt="原始图片"
@@ -25,11 +28,14 @@ export function ImagePreview({ originalUrl, processedUrl, originalName, processe
         </div>
       )}
       {processedUrl && (
-        <div className="space-y-2">
-          <p className="text-sm text-gray-400 font-medium">
+        <div className="space-y-2.5">
+          <p className="text-sm font-medium text-surface-900/50 dark:text-surface-100/50">
             处理结果{processedName ? ` · ${processedName}` : ''}
           </p>
-          <div className="relative bg-gray-800 rounded-xl overflow-hidden border border-gray-700">
+          <div className="relative rounded-2xl overflow-hidden
+                         bg-surface-100 dark:bg-surface-700/40
+                         border border-surface-200/60 dark:border-surface-700/40
+                         ring-1 ring-inset ring-black/[0.03] dark:ring-white/[0.03]">
             <img
               src={processedUrl}
               alt="处理结果"

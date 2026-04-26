@@ -4,6 +4,7 @@ import { KeyInput } from './components/KeyInput'
 import { ProgressBar } from './components/ProgressBar'
 import { ImagePreview } from './components/ImagePreview'
 import { ConfirmDialog } from './components/ConfirmDialog'
+import { ThemeToggle } from './components/ThemeToggle'
 import { loadImage, imageToImageData, imageDataToBlob, createThumbnail, formatFileSize } from './utils/imageUtils'
 import { insertPngTextChunk, extractJpegExif, uint8ArrayToBase64 } from './utils/pngChunks'
 import { addHistory, isStorageAvailable } from './utils/storage'
@@ -222,41 +223,49 @@ export default function App() {
   }, [processing, resetState])
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b border-gray-800 bg-gray-950/80 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="min-h-screen flex flex-col relative">
+      <div className="mesh-gradient" />
+
+      <header className="glass-header">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700
+                            flex items-center justify-center shadow-md shadow-primary-500/20
+                            dark:shadow-primary-500/30">
               <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
             </div>
-            <h1 className="text-lg font-bold text-white">IMG Confusion</h1>
+            <div>
+              <h1 className="text-base font-bold text-surface-900 dark:text-white tracking-tight">
+                IMG Confusion
+              </h1>
+              <p className="text-[10px] font-medium text-surface-900/30 dark:text-surface-100/30 tracking-wide uppercase hidden sm:block">
+                Client-side · Privacy First
+              </p>
+            </div>
           </div>
-          <span className="text-xs text-gray-500 hidden sm:block">纯客户端 · 隐私安全</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-surface-900/30 dark:text-surface-100/30 hidden md:block">
+              纯客户端 · 隐私安全
+            </span>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-6 space-y-6">
-        <div className="flex bg-gray-900 rounded-xl p-1 border border-gray-800">
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8 space-y-5">
+        <div className="mode-switch">
           <button
             onClick={() => switchMode('obfuscate')}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              mode === 'obfuscate'
-                ? 'bg-primary-600 text-white shadow-lg'
-                : 'text-gray-400 hover:text-white'
-            }`}
+            className={`mode-btn ${mode === 'obfuscate' ? 'mode-btn-active' : 'mode-btn-inactive'}`}
           >
             🔒 图片混淆
           </button>
           <button
             onClick={() => switchMode('restore')}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              mode === 'restore'
-                ? 'bg-primary-600 text-white shadow-lg'
-                : 'text-gray-400 hover:text-white'
-            }`}
+            className={`mode-btn ${mode === 'restore' ? 'mode-btn-active' : 'mode-btn-inactive'}`}
           >
             🔑 图片还原
           </button>
@@ -266,14 +275,18 @@ export default function App() {
           <ImageUploader onFileSelect={handleFileSelect} disabled={processing} />
 
           {file && (
-            <div className="flex items-center gap-2 text-sm text-gray-400 bg-gray-800/50 rounded-lg px-4 py-2">
-              <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="flex items-center gap-2.5 text-sm
+                           bg-surface-50 dark:bg-surface-700/30
+                           rounded-xl px-4 py-2.5
+                           border border-surface-200/50 dark:border-surface-700/30
+                           animate-slide-up">
+              <svg className="w-4 h-4 flex-shrink-0 text-primary-500 dark:text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <span className="truncate">{file.name}</span>
-              <span className="text-gray-600">·</span>
-              <span>{formatFileSize(file.size)}</span>
+              <span className="truncate text-surface-900/70 dark:text-surface-100/70">{file.name}</span>
+              <span className="text-surface-900/20 dark:text-surface-100/20">·</span>
+              <span className="text-surface-900/40 dark:text-surface-100/40">{formatFileSize(file.size)}</span>
             </div>
           )}
 
@@ -285,7 +298,12 @@ export default function App() {
           />
 
           {error && (
-            <div className="flex items-center gap-2 text-sm text-red-400 bg-red-400/10 rounded-lg px-4 py-3">
+            <div className="flex items-center gap-2.5 text-sm
+                           bg-red-50 dark:bg-red-500/10
+                           text-red-600 dark:text-red-400
+                           rounded-xl px-4 py-3
+                           border border-red-200/50 dark:border-red-500/20
+                           animate-slide-up">
               <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -296,11 +314,11 @@ export default function App() {
 
           <ProgressBar progress={progress} />
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 pt-1">
             <button
               onClick={handleProcessClick}
               disabled={processing || !file}
-              className="btn-primary flex-1 flex items-center justify-center gap-2"
+              className="btn-primary flex-1 flex items-center justify-center gap-2.5 py-3.5"
             >
               {processing ? (
                 <>
@@ -311,11 +329,24 @@ export default function App() {
                   处理中...
                 </>
               ) : (
-                mode === 'obfuscate' ? '开始混淆' : '开始还原'
+                <>
+                  {mode === 'obfuscate' ? (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                    </svg>
+                  )}
+                  {mode === 'obfuscate' ? '开始混淆' : '开始还原'}
+                </>
               )}
             </button>
             {processedBlob && (
-              <button onClick={handleDownload} className="btn-secondary flex items-center gap-2">
+              <button onClick={handleDownload} className="btn-secondary flex items-center gap-2 animate-scale-in">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -334,32 +365,34 @@ export default function App() {
         />
 
         <div className="card">
-          <h3 className="text-sm font-medium text-gray-400 mb-3">使用说明</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-500">
-            <div className="flex items-start gap-2">
-              <span className="text-primary-500 mt-0.5">1</span>
-              <span>选择「混淆」模式，上传图片（可设置密钥）</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-primary-500 mt-0.5">2</span>
-              <span>点击混淆，下载混淆后的图片</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-primary-500 mt-0.5">3</span>
-              <span>选择「还原」模式，上传混淆图片</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-primary-500 mt-0.5">4</span>
-              <span>输入相同密钥（若混淆时设置了），点击还原</span>
-            </div>
+          <h3 className="text-sm font-semibold text-surface-900/60 dark:text-surface-100/60 mb-4">使用说明</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-surface-900/40 dark:text-surface-100/40">
+            {[
+              '选择「混淆」模式，上传图片（可设置密钥）',
+              '点击混淆，下载混淆后的图片',
+              '选择「还原」模式，上传混淆图片',
+              '输入相同密钥（若混淆时设置了），点击还原',
+            ].map((text, i) => (
+              <div key={i} className="flex items-start gap-2.5">
+                <span className="w-5 h-5 rounded-md bg-primary-50 dark:bg-primary-500/10
+                                text-primary-600 dark:text-primary-400
+                                flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">
+                  {i + 1}
+                </span>
+                <span className="leading-relaxed">{text}</span>
+              </div>
+            ))}
           </div>
-          <p className="text-xs text-gray-600 mt-3">
-            ⚠️ 所有处理均在本地浏览器完成，图片不会上传至任何服务器。设置密钥可提高安全性，丢失密钥将无法还原图片。
-          </p>
+          <div className="mt-4 pt-3 border-t border-surface-200/50 dark:border-surface-700/30">
+            <p className="text-xs text-surface-900/30 dark:text-surface-100/30 leading-relaxed">
+              ⚠️ 所有处理均在本地浏览器完成，图片不会上传至任何服务器。设置密钥可提高安全性，丢失密钥将无法还原图片。
+            </p>
+          </div>
         </div>
       </main>
 
-      <footer className="border-t border-gray-800 py-4 text-center text-xs text-gray-600">
+      <footer className="py-5 text-center text-xs text-surface-900/20 dark:text-surface-100/20
+                         border-t border-surface-200/30 dark:border-surface-700/20">
         IMG Confusion · 纯客户端图片混淆工具 · MIT License
       </footer>
 
