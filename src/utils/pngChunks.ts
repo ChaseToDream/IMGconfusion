@@ -138,3 +138,57 @@ export function base64ToUint8Array(base64: string): Uint8Array {
   }
   return data
 }
+
+export function insertJpegExifIntoPng(pngData: Uint8Array, exifData: Uint8Array): Uint8Array | null {
+  if (exifData.length < 4) return null
+  const exifMarker = exifData.slice(0, 2)
+  if (exifMarker[0] !== 0xff || exifMarker[1] !== 0xe1) return null
+
+  const exifPayload = exifData.slice(4)
+  const keywordBytes = new TextEncoder().encode('Raw profile type exif')
+  const nullSep = new Uint8Array([0])
+  const headerLine = new TextEncoder().encode('\nexif\n' + exifPayload.length.toString(16) + '\n')
+
+  const hexChars = '0123456789abcdef'
+  const hexData = new Uint8Array(exifPayload.length * 2)
+  for (let i = 0; i < exifPayload.length; i++) {
+    hexData[i * 2] = hexChars.charCodeAt((exifPayload[i] >> 4) & 0x0f)
+    hexData[i * 2 + 1] = hexChars.charCodeAt(exifPayload[i] & 0x0f)
+  }
+
+  const totalChunkDataLen = keywordBytes.length + nullSep.length + headerLine.length + hexData.length
+  const chunkData = new Uint8Array(totalChunkDataLen)
+  let pos = 0
+  chunkData.set(keywordBytes, pos); pos += keywordBytes.length
+  chunkData.set(nullSep, pos); pos += nullSep.length
+  chunkData.set(headerLine, pos); pos += headerLine.length
+  chunkData.set(hexData, pos)
+
+  const exifChunk = writeChunk('tEXt', chunkData)
+
+  const parts: Uint8Array[] = [PNG_SIGNATURE]
+  let offset = 8
+  let ihdrSeen = false
+
+  while (offset < pngData.length) {
+    const chunk = readChunk(pngData, offset)
+    if (!chunk) break
+
+    parts.push(pngData.slice(offset, chunk.nextOffset))
+
+    if (chunk.type === 'IHDR' && !ihdrSeen) {
+      parts.push(exifChunk)
+      ihdrSeen = true
+    }
+    offset = chunk.nextOffset
+  }
+
+  const totalLength = parts.reduce((sum, p) => sum + p.length, 0)
+  const result = new Uint8Array(totalLength)
+  pos = 0
+  for (const part of parts) {
+    result.set(part, pos)
+    pos += part.length
+  }
+  return result
+}

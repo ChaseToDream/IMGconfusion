@@ -1,2 +1,2 @@
 export { SeededPRNG, keyToSeed } from './prng'
-export { obfuscatePixels, restorePixels, algorithms, SHUFFLE_ALGORITHM } from './shuffle'
+export { obfuscatePixels, restorePixels, obfuscateChannels, restoreChannels, algorithms, SHUFFLE_ALGORITHM, CHANNEL_ALGORITHM } from './shuffle'

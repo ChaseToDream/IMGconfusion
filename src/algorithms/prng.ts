@@ -1,7 +1,3 @@
-/**
- * 基于 xorshift128+ 的种子伪随机数生成器
- * 确保相同种子产生相同随机序列，用于可逆的像素洗牌
- */
 export class SeededPRNG {
   private state0: number
   private state1: number
@@ -45,16 +41,36 @@ export class SeededPRNG {
   }
 }
 
-/**
- * 将密码字符串转换为数值种子（使用 FNV-1a 哈希算法）
- * 空密钥时返回固定默认种子，使密钥成为可选参数
- */
+function fmix64(h: number): number {
+  h ^= h >>> 16
+  h = Math.imul(h, 0x85ebca6b)
+  h ^= h >>> 13
+  h = Math.imul(h, 0xc2b2ae35)
+  h ^= h >>> 16
+  return h >>> 0
+}
+
 export function keyToSeed(key: string): number {
   if (!key) return 0x4d47434f
-  let hash = 0x811c9dc5
+
+  let h1 = 0x811c9dc5
+  let h2 = 0xc1a2d3e4
+
   for (let i = 0; i < key.length; i++) {
-    hash ^= key.charCodeAt(i)
-    hash = Math.imul(hash, 0x01000193)
+    const c = key.charCodeAt(i)
+    h1 ^= c
+    h1 = Math.imul(h1, 0x01000193)
+    h2 ^= c << (i % 24)
+    h2 = Math.imul(h2, 0x9e3779b9)
   }
-  return hash >>> 0
+
+  h1 = fmix64(h1)
+  h2 = fmix64(h2 ^ h1)
+
+  for (let round = 0; round < 8; round++) {
+    h1 = fmix64(h1 ^ Math.imul(h2, 0x5bd1e995))
+    h2 = fmix64(h2 ^ Math.imul(h1, 0x27d4eb2d))
+  }
+
+  return (h1 ^ h2) >>> 0
 }
