@@ -64,6 +64,20 @@ export default function App() {
     }
   }, [])
 
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      document.querySelectorAll('.card').forEach((card) => {
+        const rect = card.getBoundingClientRect()
+        const x = ((e.clientX - rect.left) / rect.width) * 100
+        const y = ((e.clientY - rect.top) / rect.height) * 100
+        ;(card as HTMLElement).style.setProperty('--mouse-x', `${x}%`)
+        ;(card as HTMLElement).style.setProperty('--mouse-y', `${y}%`)
+      })
+    }
+    document.addEventListener('mousemove', handleMouseMove)
+    return () => document.removeEventListener('mousemove', handleMouseMove)
+  }, [])
+
   const resetState = useCallback(() => {
     if (originalUrl) URL.revokeObjectURL(originalUrl)
     if (processedUrl) URL.revokeObjectURL(processedUrl)
@@ -320,49 +334,58 @@ export default function App() {
 
       {isGlobalDrag && (
         <div className="fixed inset-0 z-50 flex items-center justify-center
-                       bg-primary-500/10 dark:bg-primary-500/5 backdrop-blur-sm
-                       border-4 border-dashed border-primary-400 dark:border-primary-500
+                       bg-primary-500/5 dark:bg-primary-500/3 backdrop-blur-md
+                       border-2 border-dashed border-primary-400/60 dark:border-primary-400/40
                        animate-fade-in pointer-events-none">
           <div className="text-center">
-            <svg className="w-16 h-16 mx-auto text-primary-500 dark:text-primary-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
+            <div className="w-20 h-20 mx-auto mb-5 rounded-2xl
+                          bg-primary-100/80 dark:bg-primary-500/15
+                          flex items-center justify-center">
+              <svg className="w-10 h-10 text-primary-500 dark:text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
             <p className="text-xl font-bold text-primary-600 dark:text-primary-400">松开以上传图片</p>
           </div>
         </div>
       )}
 
       <header className="glass-header">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700
-                            flex items-center justify-center shadow-md shadow-primary-500/20
-                            dark:shadow-primary-500/30">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center relative"
+                 style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #4338ca 100%)' }}>
               <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
+              <div className="absolute inset-0 rounded-xl" style={{ boxShadow: '0 2px 8px -1px rgba(99, 102, 241, 0.4)' }} />
             </div>
             <div>
               <h1 className="text-base font-bold text-surface-900 dark:text-white tracking-tight">
                 IMG Confusion
               </h1>
-              <p className="text-[10px] font-medium text-surface-900/30 dark:text-surface-100/30 tracking-wide uppercase hidden sm:block">
+              <p className="text-[10px] font-medium text-surface-900/35 dark:text-surface-100/35 tracking-widest uppercase hidden sm:block">
                 Client-side · Privacy First
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-surface-900/30 dark:text-surface-100/30 hidden md:block">
-              纯客户端 · 隐私安全
-            </span>
+          <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg
+                          bg-surface-100/80 dark:bg-surface-700/40
+                          border border-surface-200/50 dark:border-surface-700/40">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-soft" />
+              <span className="text-[11px] font-medium text-surface-900/50 dark:text-surface-100/50">
+                纯客户端 · 隐私安全
+              </span>
+            </div>
             <ThemeToggle />
           </div>
         </div>
       </header>
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8 space-y-5">
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-10 space-y-6">
         <div className="mode-switch">
           <button
             onClick={() => switchMode('obfuscate')}
@@ -378,21 +401,23 @@ export default function App() {
           </button>
         </div>
 
-        <div className="card space-y-5">
+        <div className="card space-y-6">
           <ImageUploader onFileSelect={handleFileSelect} disabled={processing} />
 
           {file && (
-            <div className="flex items-center gap-2.5 text-sm
-                           bg-surface-50 dark:bg-surface-700/30
-                           rounded-xl px-4 py-2.5
+            <div className="flex items-center gap-3 text-sm
+                           bg-surface-50/80 dark:bg-surface-700/25
+                           rounded-xl px-4 py-3
                            border border-surface-200/50 dark:border-surface-700/30
                            animate-slide-up">
-              <svg className="w-4 h-4 flex-shrink-0 text-primary-500 dark:text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <span className="truncate text-surface-900/70 dark:text-surface-100/70">{file.name}</span>
-              <span className="text-surface-900/20 dark:text-surface-100/20">·</span>
+              <div className="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-500/10 flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-primary-500 dark:text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <span className="truncate text-surface-900/70 dark:text-surface-100/70 font-medium">{file.name}</span>
+              <span className="text-surface-900/15 dark:text-surface-100/15">·</span>
               <span className="text-surface-900/40 dark:text-surface-100/40">{formatFileSize(file.size)}</span>
             </div>
           )}
@@ -405,27 +430,27 @@ export default function App() {
           />
 
           {mode === 'obfuscate' && (
-            <div className="space-y-2.5">
-              <label className="flex items-center gap-1.5 text-sm font-medium
-                                text-surface-900/60 dark:text-surface-100/60">
+            <div className="space-y-3">
+              <label className="flex items-center gap-1.5 text-sm font-semibold
+                                text-surface-900/70 dark:text-surface-100/70">
                 混淆算法
               </label>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-2 gap-3">
                 {algorithms.map((algo) => (
                   <button
                     key={algo.id}
                     onClick={() => setAlgorithmId(algo.id)}
                     disabled={processing}
-                    className={`text-left rounded-2xl px-4 py-3 transition-all duration-200 border
+                    className={`text-left rounded-2xl px-4 py-3.5 transition-all duration-300 border
                               ${algorithmId === algo.id
-                                ? 'border-primary-400 dark:border-primary-500 bg-primary-50 dark:bg-primary-500/10 ring-1 ring-primary-400/30 dark:ring-primary-500/30'
-                                : 'border-surface-200 dark:border-surface-700/60 bg-surface-50 dark:bg-surface-700/30 hover:border-primary-300 dark:hover:border-primary-500/40'
+                                ? 'border-primary-400/80 dark:border-primary-500/60 bg-primary-50/80 dark:bg-primary-500/10 ring-1 ring-primary-400/20 dark:ring-primary-500/20 shadow-sm'
+                                : 'border-surface-200/80 dark:border-surface-700/50 bg-white/50 dark:bg-surface-700/20 hover:border-primary-300/60 dark:hover:border-primary-500/30 hover:bg-primary-50/30 dark:hover:bg-primary-500/5'
                               }`}
                   >
                     <p className={`text-sm font-semibold ${algorithmId === algo.id ? 'text-primary-700 dark:text-primary-400' : 'text-surface-900/70 dark:text-surface-100/70'}`}>
                       {algo.name}
                     </p>
-                    <p className={`text-xs mt-0.5 ${algorithmId === algo.id ? 'text-primary-600/60 dark:text-primary-400/60' : 'text-surface-900/35 dark:text-surface-100/35'}`}>
+                    <p className={`text-xs mt-1 leading-relaxed ${algorithmId === algo.id ? 'text-primary-600/60 dark:text-primary-400/60' : 'text-surface-900/40 dark:text-surface-100/40'}`}>
                       {algo.description}
                     </p>
                   </button>
@@ -435,16 +460,18 @@ export default function App() {
           )}
 
           {error && (
-            <div className="flex items-center gap-2.5 text-sm
-                           bg-red-50 dark:bg-red-500/10
+            <div className="flex items-center gap-3 text-sm
+                           bg-red-50/80 dark:bg-red-500/8
                            text-red-600 dark:text-red-400
-                           rounded-xl px-4 py-3
-                           border border-red-200/50 dark:border-red-500/20
+                           rounded-xl px-4 py-3.5
+                           border border-red-200/50 dark:border-red-500/15
                            animate-slide-up">
-              <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <div className="w-7 h-7 rounded-lg bg-red-100 dark:bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
               {error}
             </div>
           )}
@@ -503,36 +530,50 @@ export default function App() {
 
         {mode === 'restore' && restoredMeta && (
           <div className="card animate-slide-up">
-            <h3 className="text-sm font-semibold text-surface-900/60 dark:text-surface-100/60 mb-3">还原元数据</h3>
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            <h3 className="text-sm font-semibold text-surface-900/70 dark:text-surface-100/70 mb-4 flex items-center gap-2">
+              <svg className="w-4 h-4 text-primary-500 dark:text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              还原元数据
+            </h3>
+            <div className="grid grid-cols-2 gap-2.5 text-xs">
               {restoredMeta.originalName && (
-                <div className="bg-surface-50 dark:bg-surface-700/30 rounded-lg px-3 py-2">
-                  <span className="text-surface-900/30 dark:text-surface-100/30">原始文件名</span>
-                  <p className="text-surface-900/70 dark:text-surface-100/70 mt-0.5 truncate">{restoredMeta.originalName}</p>
+                <div className="bg-surface-50/80 dark:bg-surface-700/25 rounded-xl px-3.5 py-2.5
+                              border border-surface-200/40 dark:border-surface-700/25">
+                  <span className="text-surface-900/35 dark:text-surface-100/35 font-medium">原始文件名</span>
+                  <p className="text-surface-900/75 dark:text-surface-100/75 mt-0.5 truncate font-medium">{restoredMeta.originalName}</p>
                 </div>
               )}
               {restoredMeta.originalType && (
-                <div className="bg-surface-50 dark:bg-surface-700/30 rounded-lg px-3 py-2">
-                  <span className="text-surface-900/30 dark:text-surface-100/30">原始格式</span>
-                  <p className="text-surface-900/70 dark:text-surface-100/70 mt-0.5">{restoredMeta.originalType}</p>
+                <div className="bg-surface-50/80 dark:bg-surface-700/25 rounded-xl px-3.5 py-2.5
+                              border border-surface-200/40 dark:border-surface-700/25">
+                  <span className="text-surface-900/35 dark:text-surface-100/35 font-medium">原始格式</span>
+                  <p className="text-surface-900/75 dark:text-surface-100/75 mt-0.5 font-medium">{restoredMeta.originalType}</p>
                 </div>
               )}
               {restoredMeta.width && restoredMeta.height && (
-                <div className="bg-surface-50 dark:bg-surface-700/30 rounded-lg px-3 py-2">
-                  <span className="text-surface-900/30 dark:text-surface-100/30">原始尺寸</span>
-                  <p className="text-surface-900/70 dark:text-surface-100/70 mt-0.5">{restoredMeta.width} × {restoredMeta.height}</p>
+                <div className="bg-surface-50/80 dark:bg-surface-700/25 rounded-xl px-3.5 py-2.5
+                              border border-surface-200/40 dark:border-surface-700/25">
+                  <span className="text-surface-900/35 dark:text-surface-100/35 font-medium">原始尺寸</span>
+                  <p className="text-surface-900/75 dark:text-surface-100/75 mt-0.5 font-medium">{restoredMeta.width} × {restoredMeta.height}</p>
                 </div>
               )}
               {restoredMeta.originalSize && (
-                <div className="bg-surface-50 dark:bg-surface-700/30 rounded-lg px-3 py-2">
-                  <span className="text-surface-900/30 dark:text-surface-100/30">原始大小</span>
-                  <p className="text-surface-900/70 dark:text-surface-100/70 mt-0.5">{formatFileSize(Number(restoredMeta.originalSize))}</p>
+                <div className="bg-surface-50/80 dark:bg-surface-700/25 rounded-xl px-3.5 py-2.5
+                              border border-surface-200/40 dark:border-surface-700/25">
+                  <span className="text-surface-900/35 dark:text-surface-100/35 font-medium">原始大小</span>
+                  <p className="text-surface-900/75 dark:text-surface-100/75 mt-0.5 font-medium">{formatFileSize(Number(restoredMeta.originalSize))}</p>
                 </div>
               )}
               {restoredMeta.exif && (
-                <div className="col-span-2 bg-surface-50 dark:bg-surface-700/30 rounded-lg px-3 py-2">
-                  <span className="text-surface-900/30 dark:text-surface-100/30">EXIF 数据</span>
-                  <p className="text-surface-900/70 dark:text-surface-100/70 mt-0.5">✓ 已恢复原始 EXIF 信息</p>
+                <div className="col-span-2 bg-surface-50/80 dark:bg-surface-700/25 rounded-xl px-3.5 py-2.5
+                              border border-surface-200/40 dark:border-surface-700/25">
+                  <span className="text-surface-900/35 dark:text-surface-100/35 font-medium">EXIF 数据</span>
+                  <p className="text-surface-900/75 dark:text-surface-100/75 mt-0.5 font-medium flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    已恢复原始 EXIF 信息
+                  </p>
                 </div>
               )}
             </div>
@@ -542,25 +583,31 @@ export default function App() {
         <HistoryPanel />
 
         <div className="card">
-          <h3 className="text-sm font-semibold text-surface-900/60 dark:text-surface-100/60 mb-4">使用说明</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-surface-900/40 dark:text-surface-100/40">
+          <h3 className="text-sm font-semibold text-surface-900/70 dark:text-surface-100/70 mb-5 flex items-center gap-2">
+            <svg className="w-4 h-4 text-primary-500 dark:text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            使用说明
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs text-surface-900/50 dark:text-surface-100/50">
             {[
               '选择「混淆」模式，上传图片（可设置密钥）',
               '点击混淆，下载混淆后的图片',
               '选择「还原」模式，上传混淆图片',
               '输入相同密钥（若混淆时设置了），点击还原',
             ].map((text, i) => (
-              <div key={i} className="flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded-md bg-primary-50 dark:bg-primary-500/10
-                                text-primary-600 dark:text-primary-400
-                                flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">
+              <div key={i} className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5
+                                text-primary-600 dark:text-primary-400"
+                      style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(99,102,241,0.05) 100%)' }}>
                   {i + 1}
                 </span>
                 <span className="leading-relaxed">{text}</span>
               </div>
             ))}
           </div>
-          <div className="mt-4 pt-3 border-t border-surface-200/50 dark:border-surface-700/30">
+          <div className="mt-5 pt-4 border-t border-surface-200/40 dark:border-surface-700/25">
             <p className="text-xs text-surface-900/30 dark:text-surface-100/30 leading-relaxed">
               ⚠️ 所有处理均在本地浏览器完成，图片不会上传至任何服务器。设置密钥可提高安全性，丢失密钥将无法还原图片。
               <br />快捷键：按 1/2 切换模式，Ctrl+Enter 执行处理
@@ -569,7 +616,7 @@ export default function App() {
         </div>
       </main>
 
-      <footer className="py-5 text-center text-xs text-surface-900/20 dark:text-surface-100/20
+      <footer className="py-6 text-center text-xs text-surface-900/20 dark:text-surface-100/20
                          border-t border-surface-200/30 dark:border-surface-700/20">
         IMG Confusion · 纯客户端图片混淆工具 · MIT License
       </footer>

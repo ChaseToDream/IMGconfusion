@@ -50,11 +50,11 @@ export function ImageUploader({ onFileSelect, accept = 'image/*', disabled = fal
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={`
-        relative border-2 border-dashed rounded-3xl p-8 md:p-12 text-center cursor-pointer
-        transition-all duration-300 ease-in-out group
+        relative rounded-3xl p-8 md:p-12 text-center cursor-pointer
+        transition-all duration-300 ease-out group overflow-hidden
         ${isDragging
-          ? 'border-primary-400 dark:border-primary-400 bg-primary-50 dark:bg-primary-500/10 scale-[1.01]'
-          : 'border-surface-300 dark:border-surface-700/60 hover:border-primary-300 dark:hover:border-primary-500/50 bg-surface-50/50 dark:bg-surface-800/30 hover:bg-primary-50/30 dark:hover:bg-primary-500/5'
+          ? 'border-2 border-primary-400 dark:border-primary-400 bg-primary-50/60 dark:bg-primary-500/8 scale-[1.01]'
+          : 'border-2 border-dashed border-surface-300/80 dark:border-surface-700/50 hover:border-primary-300/70 dark:hover:border-primary-500/40 bg-surface-50/30 dark:bg-surface-800/15 hover:bg-primary-50/20 dark:hover:bg-primary-500/3'
         }
         ${disabled ? 'opacity-40 cursor-not-allowed' : ''}
       `}
@@ -67,16 +67,21 @@ export function ImageUploader({ onFileSelect, accept = 'image/*', disabled = fal
         className="hidden"
         disabled={disabled}
       />
-      <div className="flex flex-col items-center gap-4">
+      {isDragging && (
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-accent-500/5" />
+        </div>
+      )}
+      <div className="relative flex flex-col items-center gap-4">
         <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300
                         ${isDragging
-                          ? 'bg-primary-100 dark:bg-primary-500/20'
-                          : 'bg-surface-100 dark:bg-surface-700/50 group-hover:bg-primary-50 dark:group-hover:bg-primary-500/10'
+                          ? 'bg-primary-100/80 dark:bg-primary-500/15 scale-110'
+                          : 'bg-surface-100/80 dark:bg-surface-700/40 group-hover:bg-primary-50/80 dark:group-hover:bg-primary-500/10 group-hover:scale-105'
                         }`}>
-          <svg className={`w-8 h-8 transition-colors duration-300
+          <svg className={`w-8 h-8 transition-all duration-300
                           ${isDragging
                             ? 'text-primary-500 dark:text-primary-400'
-                            : 'text-surface-900/30 dark:text-surface-100/30 group-hover:text-primary-500 dark:group-hover:text-primary-400'
+                            : 'text-surface-900/25 dark:text-surface-100/25 group-hover:text-primary-400 dark:group-hover:text-primary-400'
                           }`}
                fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -84,14 +89,14 @@ export function ImageUploader({ onFileSelect, accept = 'image/*', disabled = fal
           </svg>
         </div>
         <div>
-          <p className={`text-lg font-semibold transition-colors duration-300
+          <p className={`text-base font-semibold transition-colors duration-300
                         ${isDragging
                           ? 'text-primary-600 dark:text-primary-400'
-                          : 'text-surface-900/70 dark:text-surface-100/70'
+                          : 'text-surface-900/60 dark:text-surface-100/60'
                         }`}>
             {isDragging ? '松开以上传图片' : '拖放图片到此处'}
           </p>
-          <p className="text-sm text-surface-900/35 dark:text-surface-100/35 mt-1.5">
+          <p className="text-sm text-surface-900/30 dark:text-surface-100/30 mt-1.5">
             或点击选择文件 · 支持 PNG / JPG / WebP
           </p>
         </div>
