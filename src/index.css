@@ -8,72 +8,212 @@
   }
 
   ::selection {
-    @apply bg-primary-500/30;
+    @apply bg-primary-500/25 text-primary-900 dark:text-primary-100;
   }
 
   body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-300/50 dark:bg-surface-700/50 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-surface-300 dark:bg-surface-700;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-2xl
-           transition-all duration-200 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed
-           disabled:active:scale-100 shadow-lg shadow-primary-600/20 dark:shadow-primary-600/30
-           hover:shadow-xl hover:shadow-primary-600/25 dark:hover:shadow-primary-600/40;
+    @apply relative px-6 py-3.5 font-semibold rounded-2xl text-white
+           transition-all duration-300 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed
+           disabled:active:scale-100 overflow-hidden;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #4338ca 100%);
+    box-shadow:
+      0 4px 14px -3px rgba(99, 102, 241, 0.4),
+      0 1px 3px rgba(99, 102, 241, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #818cf8 0%, #6366f1 50%, #4f46e5 100%);
+    box-shadow:
+      0 8px 22px -5px rgba(99, 102, 241, 0.5),
+      0 2px 6px rgba(99, 102, 241, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary::after {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%);
+  }
+
+  .btn-primary:hover::after {
+    @apply opacity-100;
+  }
+
+  .dark .btn-primary {
+    background: linear-gradient(135deg, #818cf8 0%, #6366f1 50%, #4f46e5 100%);
+    box-shadow:
+      0 4px 14px -3px rgba(99, 102, 241, 0.35),
+      0 0 0 1px rgba(99, 102, 241, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .dark .btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #a5b4fc 0%, #818cf8 50%, #6366f1 100%);
+    box-shadow:
+      0 8px 22px -5px rgba(99, 102, 241, 0.45),
+      0 0 0 1px rgba(99, 102, 241, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
 
   .btn-secondary {
-    @apply px-6 py-3 font-semibold rounded-2xl transition-all duration-200 active:scale-[0.97]
-           bg-surface-200 hover:bg-surface-700/80 text-surface-900 dark:bg-surface-700
-           dark:hover:bg-surface-800 dark:text-surface-100 border border-surface-200
-           dark:border-surface-700;
+    @apply px-6 py-3.5 font-semibold rounded-2xl transition-all duration-300 active:scale-[0.97]
+           bg-white dark:bg-surface-700/80
+           text-surface-700 dark:text-surface-200
+           border border-surface-200 dark:border-surface-700/80;
+    box-shadow:
+      0 2px 8px -2px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    @apply bg-surface-50 dark:bg-surface-700 border-surface-300 dark:border-surface-600;
+    box-shadow:
+      0 4px 12px -3px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transform: translateY(-1px);
+  }
+
+  .dark .btn-secondary {
+    box-shadow:
+      0 2px 8px -2px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
   .btn-danger {
-    @apply px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-2xl
-           transition-all duration-200 active:scale-[0.97] shadow-lg shadow-red-500/20;
+    @apply relative px-6 py-3.5 font-semibold rounded-2xl text-white
+           transition-all duration-300 active:scale-[0.97] overflow-hidden;
+    background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+    box-shadow:
+      0 4px 14px -3px rgba(244, 63, 94, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    background: linear-gradient(135deg, #fb7185 0%, #f43f5e 100%);
+    box-shadow:
+      0 8px 22px -5px rgba(244, 63, 94, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
   }
 
   .card {
-    @apply rounded-3xl p-6 md:p-8
-           bg-white/70 dark:bg-surface-800/60
-           border border-surface-200/60 dark:border-surface-700/40
-           backdrop-blur-xl shadow-lg shadow-black/[0.03] dark:shadow-black/20;
+    @apply rounded-3xl p-6 md:p-8 relative overflow-hidden;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(226, 232, 240, 0.6);
+    backdrop-filter: blur(20px) saturate(1.5);
+    box-shadow:
+      0 4px 24px -4px rgba(0, 0, 0, 0.04),
+      0 1px 2px rgba(0, 0, 0, 0.02);
+  }
+
+  .dark .card {
+    background: rgba(15, 23, 42, 0.65);
+    border-color: rgba(30, 41, 59, 0.6);
+    box-shadow:
+      0 4px 24px -4px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(99, 102, 241, 0.05);
+  }
+
+  .card::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-500 pointer-events-none;
+    background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+      rgba(99, 102, 241, 0.04), transparent 40%);
+  }
+
+  .card:hover::before {
+    @apply opacity-100;
+  }
+
+  .dark .card::before {
+    background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+      rgba(99, 102, 241, 0.06), transparent 40%);
   }
 
   .input-field {
     @apply w-full px-4 py-3.5 rounded-2xl font-body text-sm
-           bg-surface-100 dark:bg-surface-700/60
+           bg-white dark:bg-surface-700/50
            border border-surface-200 dark:border-surface-700/60
            text-surface-900 dark:text-surface-100
            placeholder-surface-900/30 dark:placeholder-surface-100/30
            focus:outline-none focus:border-primary-400 dark:focus:border-primary-500
-           focus:ring-2 focus:ring-primary-500/20 dark:focus:ring-primary-500/30
-           transition-all duration-200;
+           focus:ring-2 focus:ring-primary-500/15 dark:focus:ring-primary-500/20
+           transition-all duration-300;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  .dark .input-field {
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
   }
 
   .glass-header {
-    @apply sticky top-0 z-40 backdrop-blur-2xl
-           bg-white/60 dark:bg-surface-950/70
-           border-b border-surface-200/50 dark:border-surface-700/30;
+    @apply sticky top-0 z-40;
+    background: rgba(248, 250, 252, 0.8);
+    backdrop-filter: blur(24px) saturate(1.8);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+  }
+
+  .dark .glass-header {
+    background: rgba(7, 11, 20, 0.75);
+    border-bottom-color: rgba(30, 41, 59, 0.4);
   }
 
   .mode-switch {
-    @apply flex rounded-2xl p-1.5
-           bg-surface-100 dark:bg-surface-700/50
-           border border-surface-200/60 dark:border-surface-700/40;
+    @apply relative flex rounded-2xl p-1.5;
+    background: rgba(241, 245, 249, 0.9);
+    border: 1px solid rgba(226, 232, 240, 0.6);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  .dark .mode-switch {
+    background: rgba(30, 41, 59, 0.5);
+    border-color: rgba(30, 41, 59, 0.6);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
   }
 
   .mode-btn {
-    @apply flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200;
+    @apply flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 relative z-10;
   }
 
   .mode-btn-active {
-    @apply bg-white dark:bg-primary-600 text-primary-700 dark:text-white
-           shadow-md shadow-black/[0.06] dark:shadow-primary-600/30;
+    @apply text-white;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    box-shadow:
+      0 2px 8px -1px rgba(99, 102, 241, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+
+  .dark .mode-btn-active {
+    background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+    box-shadow:
+      0 2px 8px -1px rgba(99, 102, 241, 0.35),
+      0 0 0 1px rgba(99, 102, 241, 0.2);
   }
 
   .mode-btn-inactive {
@@ -95,38 +235,43 @@
   content: '';
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.5;
-  animation: float 8s ease-in-out infinite;
+  filter: blur(100px);
+  opacity: 0.4;
+  animation: float 10s ease-in-out infinite;
 }
 
 .mesh-gradient::before {
-  width: 500px;
-  height: 500px;
-  top: -10%;
-  right: -5%;
-  background: radial-gradient(circle, rgba(92, 124, 250, 0.3), transparent 70%);
+  width: 600px;
+  height: 600px;
+  top: -15%;
+  right: -10%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.25), transparent 70%);
 }
 
 .mesh-gradient::after {
-  width: 400px;
-  height: 400px;
-  bottom: -5%;
-  left: -5%;
-  background: radial-gradient(circle, rgba(255, 146, 43, 0.2), transparent 70%);
-  animation-delay: -4s;
+  width: 500px;
+  height: 500px;
+  bottom: -10%;
+  left: -8%;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.15), transparent 70%);
+  animation-delay: -5s;
 }
 
 .dark .mesh-gradient::before {
-  background: radial-gradient(circle, rgba(92, 124, 250, 0.15), transparent 70%);
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.12), transparent 70%);
 }
 
 .dark .mesh-gradient::after {
-  background: radial-gradient(circle, rgba(255, 146, 43, 0.08), transparent 70%);
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.06), transparent 70%);
 }
 
 @keyframes float {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -20px) scale(1.05); }
-  66% { transform: translate(-20px, 15px) scale(0.95); }
+  33% { transform: translate(30px, -25px) scale(1.05); }
+  66% { transform: translate(-25px, 20px) scale(0.95); }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
