@@ -1,13 +1,15 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { ImageUploader } from './components/ImageUploader'
 import { KeyInput } from './components/KeyInput'
 import { ProgressBar } from './components/ProgressBar'
 import { ImagePreview } from './components/ImagePreview'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { ThemeToggle } from './components/ThemeToggle'
+import { HistoryPanel } from './components/HistoryPanel'
 import { loadImage, imageToImageData, imageDataToBlob, createThumbnail, formatFileSize } from './utils/imageUtils'
-import { insertPngTextChunk, extractJpegExif, uint8ArrayToBase64 } from './utils/pngChunks'
+import { insertPngTextChunk, readPngTextChunk, extractJpegExif, uint8ArrayToBase64, base64ToUint8Array, insertJpegExifIntoPng } from './utils/pngChunks'
 import { addHistory, isStorageAvailable } from './utils/storage'
+import { algorithms } from './algorithms'
 import type { ProcessingProgress } from './types'
 
 type Mode = 'obfuscate' | 'restore'
@@ -23,6 +25,7 @@ export default function App() {
   const [mode, setMode] = useState<Mode>('obfuscate')
   const [file, setFile] = useState<File | null>(null)
   const [key, setKey] = useState('')
+  const [algorithmId, setAlgorithmId] = useState('pixel-shuffle')
   const [originalUrl, setOriginalUrl] = useState<string | null>(null)
   const [processedUrl, setProcessedUrl] = useState<string | null>(null)
   const [processedBlob, setProcessedBlob] = useState<Blob | null>(null)
@@ -30,18 +33,49 @@ export default function App() {
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<ConfirmState>({ open: false, title: '', message: '', onConfirm: () => {} })
+  const [restoredMeta, setRestoredMeta] = useState<Record<string, string> | null>(null)
   const workerRef = useRef<Worker | null>(null)
+  const [isGlobalDrag, setIsGlobalDrag] = useState(false)
+
+  useEffect(() => {
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault()
+      if (e.dataTransfer?.types.includes('Files')) {
+        setIsGlobalDrag(true)
+      }
+    }
+    const handleDragLeave = (e: DragEvent) => {
+      if (e.relatedTarget === null) {
+        setIsGlobalDrag(false)
+      }
+    }
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault()
+      setIsGlobalDrag(false)
+    }
+
+    document.addEventListener('dragover', handleDragOver)
+    document.addEventListener('dragleave', handleDragLeave)
+    document.addEventListener('drop', handleDrop)
+    return () => {
+      document.removeEventListener('dragover', handleDragOver)
+      document.removeEventListener('dragleave', handleDragLeave)
+      document.removeEventListener('drop', handleDrop)
+    }
+  }, [])
 
   const resetState = useCallback(() => {
     if (originalUrl) URL.revokeObjectURL(originalUrl)
     if (processedUrl) URL.revokeObjectURL(processedUrl)
     setFile(null)
     setKey('')
+    setAlgorithmId('pixel-shuffle')
     setOriginalUrl(null)
     setProcessedUrl(null)
     setProcessedBlob(null)
     setProgress(null)
     setError(null)
+    setRestoredMeta(null)
   }, [originalUrl, processedUrl])
 
   const handleFileSelect = useCallback(async (selectedFile: File) => {
@@ -113,6 +147,7 @@ export default function App() {
         height: imageData.height,
         key,
         mode,
+        algorithmId,
       })
 
       const resultData = await resultPromise
@@ -138,6 +173,7 @@ export default function App() {
           originalSize: String(file.size),
           width: String(imageData.width),
           height: String(imageData.height),
+          algorithmId,
         }
 
         const exifData = extractJpegExif(rawFileData)
@@ -149,6 +185,37 @@ export default function App() {
         const metaBuffer = new ArrayBuffer(pngWithMeta.byteLength)
         new Uint8Array(metaBuffer).set(pngWithMeta)
         blob = new Blob([metaBuffer], { type: 'image/png' })
+      }
+
+      if (mode === 'restore') {
+        setProgress({ phase: '正在读取元数据...', current: 99, total: 100, percent: 99 })
+        const pngData = new Uint8Array(await readFileAsUint8Array(file))
+        const metaStr = readPngTextChunk(pngData, 'imgconfusion')
+        if (metaStr) {
+          try {
+            const meta = JSON.parse(metaStr) as Record<string, string>
+            setRestoredMeta(meta)
+
+            if (meta.algorithmId) {
+              setAlgorithmId(meta.algorithmId)
+            }
+
+            if (meta.exif) {
+              try {
+                const exifBytes = base64ToUint8Array(meta.exif)
+                const pngResult = new Uint8Array(await blob.arrayBuffer())
+                const exifApp1 = new Uint8Array(exifBytes.length)
+                exifApp1.set(exifBytes)
+                const withExif = insertJpegExifIntoPng(pngResult, exifApp1)
+                if (withExif) {
+                  const buf = new ArrayBuffer(withExif.byteLength)
+                  new Uint8Array(buf).set(withExif)
+                  blob = new Blob([buf], { type: 'image/png' })
+                }
+              } catch { /* ignore EXIF restore errors */ }
+            }
+          } catch { /* ignore metadata parse errors */ }
+        }
       }
 
       setProcessedBlob(blob)
@@ -167,7 +234,7 @@ export default function App() {
       if (isStorageAvailable()) {
         try {
           const thumb = createThumbnail(img)
-          addHistory(file.name, mode, 'pixel-shuffle', thumb)
+          addHistory(file.name, mode, algorithmId, thumb)
         } catch { /* ignore thumbnail errors */ }
       }
     } catch (err) {
@@ -176,7 +243,7 @@ export default function App() {
     } finally {
       setProcessing(false)
     }
-  }, [file, key, mode, processedUrl, readFileAsUint8Array])
+  }, [file, key, mode, algorithmId, processedUrl, readFileAsUint8Array])
 
   const handleProcessClick = useCallback(() => {
     if (!file) {
@@ -205,16 +272,27 @@ export default function App() {
   const handleDownload = useCallback(() => {
     if (!processedBlob || !file) return
     const ext = 'png'
-    const baseName = file.name.replace(/\.[^.]+$/, '')
-    const suffix = mode === 'obfuscate' ? '_confused' : '_restored'
-    const filename = `${baseName}${suffix}.${ext}`
-
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(processedBlob)
-    a.download = filename
-    a.click()
-    URL.revokeObjectURL(a.href)
-  }, [processedBlob, file, mode])
+    let baseName = file.name.replace(/\.[^.]+$/, '')
+    if (mode === 'obfuscate') {
+      const suffix = '_confused'
+      const filename = `${baseName}${suffix}.${ext}`
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(processedBlob)
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(a.href)
+    } else {
+      if (restoredMeta?.originalName) {
+        baseName = restoredMeta.originalName.replace(/\.[^.]+$/, '')
+      }
+      const filename = `${baseName}_restored.${ext}`
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(processedBlob)
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(a.href)
+    }
+  }, [processedBlob, file, mode, restoredMeta])
 
   const switchMode = useCallback((newMode: Mode) => {
     if (processing) return
@@ -222,9 +300,38 @@ export default function App() {
     resetState()
   }, [processing, resetState])
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.key === '1') switchMode('obfuscate')
+      else if (e.key === '2') switchMode('restore')
+      else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && file && !processing) {
+        e.preventDefault()
+        handleProcessClick()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [switchMode, file, processing, handleProcessClick])
+
   return (
     <div className="min-h-screen flex flex-col relative">
       <div className="mesh-gradient" />
+
+      {isGlobalDrag && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center
+                       bg-primary-500/10 dark:bg-primary-500/5 backdrop-blur-sm
+                       border-4 border-dashed border-primary-400 dark:border-primary-500
+                       animate-fade-in pointer-events-none">
+          <div className="text-center">
+            <svg className="w-16 h-16 mx-auto text-primary-500 dark:text-primary-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p className="text-xl font-bold text-primary-600 dark:text-primary-400">松开以上传图片</p>
+          </div>
+        </div>
+      )}
 
       <header className="glass-header">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
@@ -297,6 +404,36 @@ export default function App() {
             label={mode === 'obfuscate' ? '加密密钥' : '还原密钥'}
           />
 
+          {mode === 'obfuscate' && (
+            <div className="space-y-2.5">
+              <label className="flex items-center gap-1.5 text-sm font-medium
+                                text-surface-900/60 dark:text-surface-100/60">
+                混淆算法
+              </label>
+              <div className="grid grid-cols-2 gap-2.5">
+                {algorithms.map((algo) => (
+                  <button
+                    key={algo.id}
+                    onClick={() => setAlgorithmId(algo.id)}
+                    disabled={processing}
+                    className={`text-left rounded-2xl px-4 py-3 transition-all duration-200 border
+                              ${algorithmId === algo.id
+                                ? 'border-primary-400 dark:border-primary-500 bg-primary-50 dark:bg-primary-500/10 ring-1 ring-primary-400/30 dark:ring-primary-500/30'
+                                : 'border-surface-200 dark:border-surface-700/60 bg-surface-50 dark:bg-surface-700/30 hover:border-primary-300 dark:hover:border-primary-500/40'
+                              }`}
+                  >
+                    <p className={`text-sm font-semibold ${algorithmId === algo.id ? 'text-primary-700 dark:text-primary-400' : 'text-surface-900/70 dark:text-surface-100/70'}`}>
+                      {algo.name}
+                    </p>
+                    <p className={`text-xs mt-0.5 ${algorithmId === algo.id ? 'text-primary-600/60 dark:text-primary-400/60' : 'text-surface-900/35 dark:text-surface-100/35'}`}>
+                      {algo.description}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="flex items-center gap-2.5 text-sm
                            bg-red-50 dark:bg-red-500/10
@@ -364,6 +501,46 @@ export default function App() {
           processedName={processedBlob ? (mode === 'obfuscate' ? '混淆结果' : '还原结果') : undefined}
         />
 
+        {mode === 'restore' && restoredMeta && (
+          <div className="card animate-slide-up">
+            <h3 className="text-sm font-semibold text-surface-900/60 dark:text-surface-100/60 mb-3">还原元数据</h3>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              {restoredMeta.originalName && (
+                <div className="bg-surface-50 dark:bg-surface-700/30 rounded-lg px-3 py-2">
+                  <span className="text-surface-900/30 dark:text-surface-100/30">原始文件名</span>
+                  <p className="text-surface-900/70 dark:text-surface-100/70 mt-0.5 truncate">{restoredMeta.originalName}</p>
+                </div>
+              )}
+              {restoredMeta.originalType && (
+                <div className="bg-surface-50 dark:bg-surface-700/30 rounded-lg px-3 py-2">
+                  <span className="text-surface-900/30 dark:text-surface-100/30">原始格式</span>
+                  <p className="text-surface-900/70 dark:text-surface-100/70 mt-0.5">{restoredMeta.originalType}</p>
+                </div>
+              )}
+              {restoredMeta.width && restoredMeta.height && (
+                <div className="bg-surface-50 dark:bg-surface-700/30 rounded-lg px-3 py-2">
+                  <span className="text-surface-900/30 dark:text-surface-100/30">原始尺寸</span>
+                  <p className="text-surface-900/70 dark:text-surface-100/70 mt-0.5">{restoredMeta.width} × {restoredMeta.height}</p>
+                </div>
+              )}
+              {restoredMeta.originalSize && (
+                <div className="bg-surface-50 dark:bg-surface-700/30 rounded-lg px-3 py-2">
+                  <span className="text-surface-900/30 dark:text-surface-100/30">原始大小</span>
+                  <p className="text-surface-900/70 dark:text-surface-100/70 mt-0.5">{formatFileSize(Number(restoredMeta.originalSize))}</p>
+                </div>
+              )}
+              {restoredMeta.exif && (
+                <div className="col-span-2 bg-surface-50 dark:bg-surface-700/30 rounded-lg px-3 py-2">
+                  <span className="text-surface-900/30 dark:text-surface-100/30">EXIF 数据</span>
+                  <p className="text-surface-900/70 dark:text-surface-100/70 mt-0.5">✓ 已恢复原始 EXIF 信息</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <HistoryPanel />
+
         <div className="card">
           <h3 className="text-sm font-semibold text-surface-900/60 dark:text-surface-100/60 mb-4">使用说明</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-surface-900/40 dark:text-surface-100/40">
@@ -386,6 +563,7 @@ export default function App() {
           <div className="mt-4 pt-3 border-t border-surface-200/50 dark:border-surface-700/30">
             <p className="text-xs text-surface-900/30 dark:text-surface-100/30 leading-relaxed">
               ⚠️ 所有处理均在本地浏览器完成，图片不会上传至任何服务器。设置密钥可提高安全性，丢失密钥将无法还原图片。
+              <br />快捷键：按 1/2 切换模式，Ctrl+Enter 执行处理
             </p>
           </div>
         </div>

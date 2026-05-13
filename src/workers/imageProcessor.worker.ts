@@ -1,4 +1,4 @@
-import { obfuscatePixels, restorePixels } from '../algorithms/shuffle'
+import { obfuscatePixels, restorePixels, obfuscateChannels, restoreChannels } from '../algorithms/shuffle'
 
 interface WorkerMessage {
   type: 'process'
@@ -7,6 +7,7 @@ interface WorkerMessage {
   height: number
   key: string
   mode: 'obfuscate' | 'restore'
+  algorithmId?: string
 }
 
 interface WorkerResponse {
@@ -17,10 +18,18 @@ interface WorkerResponse {
 }
 
 self.onmessage = (e: MessageEvent<WorkerMessage>) => {
-  const { data, width, height, key, mode } = e.data
+  const { data, width, height, key, mode, algorithmId } = e.data
 
   try {
-    const processFn = mode === 'obfuscate' ? obfuscatePixels : restorePixels
+    const algo = algorithmId || 'pixel-shuffle'
+    let processFn: (src: Uint8ClampedArray, w: number, h: number, k: string, p?: (n: number) => void) => Uint8ClampedArray
+
+    if (algo === 'channel-shuffle') {
+      processFn = mode === 'obfuscate' ? obfuscateChannels : restoreChannels
+    } else {
+      processFn = mode === 'obfuscate' ? obfuscatePixels : restorePixels
+    }
+
     const result = processFn(data, width, height, key, (percent: number) => {
       const response: WorkerResponse = { type: 'progress', percent }
       self.postMessage(response)
