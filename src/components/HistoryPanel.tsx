@@ -83,14 +83,27 @@ export function HistoryPanel({ onEntryClick }: HistoryPanelProps) {
                              hover:border-surface-200/60 dark:hover:border-surface-700/40
                              transition-all duration-200 cursor-pointer group/item"
                   >
-                    <img
-                      src={entry.thumbnailUrl}
-                      alt=""
-                      className="w-10 h-10 rounded-lg object-cover flex-shrink-0
-                               border border-surface-200/50 dark:border-surface-700/30
-                               group-hover/item:border-primary-300/50 dark:group-hover/item:border-primary-500/30
-                               transition-colors duration-200"
-                    />
+                    {entry.thumbnailUrl ? (
+                      <img
+                        src={entry.thumbnailUrl}
+                        alt=""
+                        className="w-10 h-10 rounded-lg object-cover flex-shrink-0
+                                 border border-surface-200/50 dark:border-surface-700/30
+                                 group-hover/item:border-primary-300/50 dark:group-hover/item:border-primary-500/30
+                                 transition-colors duration-200"
+                      />
+                    ) : (
+                      <div
+                        className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center
+                                 border border-surface-200/50 dark:border-surface-700/30
+                                 bg-surface-100/80 dark:bg-surface-700/40"
+                      >
+                        <svg className="w-4 h-4 text-surface-900/30 dark:text-surface-100/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-surface-900/70 dark:text-surface-100/70 truncate
                                   group-hover/item:text-surface-900/90 dark:group-hover/item:text-surface-100/90

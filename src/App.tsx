@@ -1,12 +1,13 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react'
 import { ImageUploader } from './components/ImageUploader'
 import { KeyInput } from './components/KeyInput'
 import { ProgressBar } from './components/ProgressBar'
 import { ImagePreview } from './components/ImagePreview'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { ThemeToggle } from './components/ThemeToggle'
-import { HistoryPanel } from './components/HistoryPanel'
-import { loadImage, imageToImageData, imageDataToBlob, createThumbnail, formatFileSize } from './utils/imageUtils'
+// HistoryPanel 默认折叠、非首屏必需，懒加载以减小首屏 JS 体积
+const HistoryPanel = lazy(() => import('./components/HistoryPanel').then(m => ({ default: m.HistoryPanel })))
+import { loadImage, imageToImageData, imageDataToBlob, createThumbnail, formatFileSize, estimateProcessingMemory, MEMORY_WARN_THRESHOLD, MEMORY_HARD_LIMIT } from './utils/imageUtils'
 import { insertPngTextChunk, readPngTextChunk, extractJpegExif, uint8ArrayToBase64, base64ToUint8Array, insertJpegExifIntoPng } from './utils/pngChunks'
 import { addHistory, isStorageAvailable } from './utils/storage'
 import { algorithms } from './algorithms'
@@ -35,7 +36,9 @@ export default function App() {
   const [confirm, setConfirm] = useState<ConfirmState>({ open: false, title: '', message: '', onConfirm: () => {} })
   const [restoredMeta, setRestoredMeta] = useState<Record<string, string> | null>(null)
   const workerRef = useRef<Worker | null>(null)
+  const workerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isGlobalDrag, setIsGlobalDrag] = useState(false)
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null)
 
   useEffect(() => {
     const handleDragOver = (e: DragEvent) => {
@@ -78,6 +81,14 @@ export default function App() {
     return () => document.removeEventListener('mousemove', handleMouseMove)
   }, [])
 
+  // 组件卸载时清理残留 Worker 与定时器，避免内存泄漏
+  useEffect(() => {
+    return () => {
+      if (workerTimerRef.current) clearTimeout(workerTimerRef.current)
+      if (workerRef.current) workerRef.current.terminate()
+    }
+  }, [])
+
   const resetState = useCallback(() => {
     if (originalUrl) URL.revokeObjectURL(originalUrl)
     if (processedUrl) URL.revokeObjectURL(processedUrl)
@@ -90,6 +101,7 @@ export default function App() {
     setProgress(null)
     setError(null)
     setRestoredMeta(null)
+    setImageDimensions(null)
   }, [originalUrl, processedUrl])
 
   const handleFileSelect = useCallback(async (selectedFile: File) => {
@@ -100,8 +112,16 @@ export default function App() {
     setProcessedBlob(null)
     setProgress(null)
     setError(null)
+    setImageDimensions(null)
     const url = URL.createObjectURL(selectedFile)
     setOriginalUrl(url)
+    // 预加载图片以获取尺寸，便于内存估算与前置警告
+    try {
+      const img = await loadImage(selectedFile)
+      setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight })
+    } catch {
+      // 尺寸获取失败不阻塞流程，后续 processImage 会再次尝试并报错
+    }
   }, [originalUrl, processedUrl])
 
   const readFileAsUint8Array = useCallback((f: File): Promise<Uint8Array> => {
@@ -120,20 +140,46 @@ export default function App() {
     setError(null)
     setProgress({ phase: mode === 'obfuscate' ? '正在混淆...' : '正在还原...', current: 0, total: 100, percent: 0 })
 
+    // 清理上一次可能残留的 worker 与超时定时器
+    const cleanupWorker = () => {
+      if (workerTimerRef.current) {
+        clearTimeout(workerTimerRef.current)
+        workerTimerRef.current = null
+      }
+      if (workerRef.current) {
+        workerRef.current.terminate()
+        workerRef.current = null
+      }
+    }
+
     try {
       const img = await loadImage(file)
       const imageData = imageToImageData(img)
       const rawFileData = await readFileAsUint8Array(file)
 
-      if (workerRef.current) {
-        workerRef.current.terminate()
+      // 大图内存硬限制：避免浏览器 OOM 崩溃
+      const estimated = estimateProcessingMemory(imageData.width, imageData.height, algorithmId)
+      if (estimated > MEMORY_HARD_LIMIT) {
+        const mp = (imageData.width * imageData.height / 1e6).toFixed(1)
+        throw new Error(`图片过大（${mp}MP，预估内存 ${formatFileSize(estimated)}），超过安全处理上限，请缩小图片后重试`)
       }
+
+      cleanupWorker()
 
       const worker = new Worker(
         new URL('./workers/imageProcessor.worker.ts', import.meta.url),
         { type: 'module' }
       )
       workerRef.current = worker
+
+      // 超时检测：大图处理可能很久，但卡死时需给出反馈
+      const WORKER_TIMEOUT_MS = 180_000
+      workerTimerRef.current = setTimeout(() => {
+        cleanupWorker()
+        setProcessing(false)
+        setProgress(null)
+        setError('处理超时，可能图片过大或浏览器资源不足，请缩小图片后重试')
+      }, WORKER_TIMEOUT_MS)
 
       const resultPromise = new Promise<Uint8ClampedArray>((resolve, reject) => {
         worker.onmessage = (e) => {
@@ -148,10 +194,12 @@ export default function App() {
           } else if (type === 'complete') {
             resolve(data)
           } else if (type === 'error') {
-            reject(new Error(workerError))
+            reject(new Error(workerError || '处理失败'))
           }
         }
-        worker.onerror = (e) => reject(new Error(e.message))
+        worker.onerror = (e) => {
+          reject(new Error(e.message || 'Worker 执行异常，可能是图片过大或浏览器资源不足'))
+        }
       })
 
       worker.postMessage({
@@ -165,6 +213,11 @@ export default function App() {
       })
 
       const resultData = await resultPromise
+      // 清除超时定时器并终止 worker
+      if (workerTimerRef.current) {
+        clearTimeout(workerTimerRef.current)
+        workerTimerRef.current = null
+      }
       worker.terminate()
       workerRef.current = null
 
@@ -252,6 +305,7 @@ export default function App() {
         } catch { /* ignore thumbnail errors */ }
       }
     } catch (err) {
+      cleanupWorker()
       setError(err instanceof Error ? err.message : '处理失败，请重试')
       setProgress(null)
     } finally {
@@ -265,23 +319,35 @@ export default function App() {
       return
     }
 
+    // 前置内存估算：超阈值时在确认弹窗中给出警告
+    let memoryWarn = ''
+    if (imageDimensions) {
+      const estimated = estimateProcessingMemory(imageDimensions.width, imageDimensions.height, algorithmId)
+      if (estimated > MEMORY_WARN_THRESHOLD) {
+        const mp = (imageDimensions.width * imageDimensions.height / 1e6).toFixed(1)
+        memoryWarn = `\n\n⚠️ 检测到大图（${mp}MP，预估内存 ${formatFileSize(estimated)}），处理期间浏览器可能卡顿或内存不足，建议缩小图片。`
+      }
+    }
+
     const actionText = mode === 'obfuscate' ? '混淆' : '还原'
+    const baseMessage = mode === 'obfuscate'
+      ? key
+        ? '混淆后的图片将无法被人眼识别，请务必牢记密钥，丢失密钥将无法还原！'
+        : '未设置密钥，任何人使用本工具均可还原图片。建议设置密钥以提高安全性。'
+      : key
+        ? '请确保使用与混淆时相同的密钥，密钥错误将产生错误的还原结果。'
+        : '该图片未使用密钥混淆，直接还原即可。'
+
     setConfirm({
       open: true,
       title: `确认${actionText}`,
-      message: mode === 'obfuscate'
-        ? key
-          ? '混淆后的图片将无法被人眼识别，请务必牢记密钥，丢失密钥将无法还原！'
-          : '未设置密钥，任何人使用本工具均可还原图片。建议设置密钥以提高安全性。'
-        : key
-          ? '请确保使用与混淆时相同的密钥，密钥错误将产生错误的还原结果。'
-          : '该图片未使用密钥混淆，直接还原即可。',
+      message: baseMessage + memoryWarn,
       onConfirm: () => {
         setConfirm((prev) => ({ ...prev, open: false }))
         processImage()
       },
     })
-  }, [file, key, mode, processImage])
+  }, [file, key, mode, algorithmId, imageDimensions, processImage])
 
   const handleDownload = useCallback(() => {
     if (!processedBlob || !file) return
@@ -580,7 +646,9 @@ export default function App() {
           </div>
         )}
 
-        <HistoryPanel />
+        <Suspense fallback={null}>
+          <HistoryPanel />
+        </Suspense>
 
         <div className="card">
           <h3 className="text-sm font-semibold text-surface-900/70 dark:text-surface-100/70 mb-5 flex items-center gap-2">
@@ -607,7 +675,21 @@ export default function App() {
               </div>
             ))}
           </div>
-          <div className="mt-5 pt-4 border-t border-surface-200/40 dark:border-surface-700/25">
+          <div className="mt-5 pt-4 border-t border-surface-200/40 dark:border-surface-700/25 space-y-2.5">
+            <div className="flex items-start gap-2.5 text-xs text-amber-600 dark:text-amber-400
+                            bg-amber-50/60 dark:bg-amber-500/8
+                            border border-amber-200/40 dark:border-amber-500/15
+                            rounded-lg px-3 py-2.5">
+              <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4a2 2 0 00-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z" />
+              </svg>
+              <span className="leading-relaxed">
+                <b>安全定位说明：</b>本工具采用基于密钥种子的像素置换算法，属于<u>视觉混淆</u>而非密码学加密。
+                适合防止图片被 casual 浏览/识别，<b>不能</b>等同于 AES 等加密方案对抗专业分析。
+                如需高强度加密，请使用专业加密工具。
+              </span>
+            </div>
             <p className="text-xs text-surface-900/30 dark:text-surface-100/30 leading-relaxed">
               ⚠️ 所有处理均在本地浏览器完成，图片不会上传至任何服务器。设置密钥可提高安全性，丢失密钥将无法还原图片。
               <br />快捷键：按 1/2 切换模式，Ctrl+Enter 执行处理
